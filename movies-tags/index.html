@@ -1,0 +1,517 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Filmes por Tag</title>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Recomendador de Filmes</h1>
+        <p style="text-align: center;">Digite tags separadas por vírgula (ex: <i>sci-fi, espaço, ação</i>)</p>
+        
+        <div class="search-box">
+            <input type="text" id="tagInput" placeholder="Ex: drama, crime, clássico..." onkeypress="handleKeyPress(event)">
+            <button onclick="recommendMovies()">Buscar</button>
+        </div>
+
+        <div id="results" class="results">
+            </div>
+    </div>
+</div>
+</body>
+</html>
+
+<script src="app.js"></script> -->
+-----------
+<!-- <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendador de Filmes TMDB</title>
+    <style>
+        /* CSS: Estilização focada em performance e design limpo */
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar de Filtros */
+        aside {
+            width: 250px;
+            padding: 2rem;
+            background-color: var(--card-bg);
+            border-right: 1px solid #334155;
+        }
+
+        aside h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .filter-label:hover {
+            color: var(--accent);
+        }
+
+        /* Container Principal */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+        }
+
+        /* Grid de Filmes */
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .movie-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background-color: #334155; /* Placeholder de carregamento */
+        }
+
+        .movie-info {
+            padding: 1rem;
+        }
+
+        .movie-title {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .movie-genres {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .movie-rating {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <h2>Filtrar por Gênero</h2>
+        <div class="filter-group" id="genre-filters">
+            </div>
+    </aside>
+
+    <main>
+        <header>
+            <h1>Filmes Populares (2024)</h1>
+            <p>Selecione múltiplos gêneros para encontrar filmes que contenham <strong>todos</strong> eles.</p>
+        </header>
+        
+        <div class="movies-grid" id="movies-container">
+            </div>
+    </main>
+
+    <script>
+        /**
+         * JAVASCRIPT: Lógica de Dados e Renderização
+         */
+
+        // 1. Mock do Dataset TMDB (Amostra reduzida para o front-end)
+        const tmdbBaseUrl = "https://image.tmdb.org/t/p/w500";
+        const moviesData = [
+            { id: 1, title: "Duna: Parte Dois", genres: ["Ação", "Aventura", "Ficção Científica"], rating: 8.3, poster: "/1pdfLvkbY9ohJlCjQH2JGjjcNsV.jpg" },
+            { id: 2, title: "Rivais", genres: ["Romance", "Drama"], rating: 7.3, poster: "/qTMTXb50mB52iG8sY1tWn41x3H8.jpg" },
+            { id: 3, title: "Guerra Civil", genres: ["Ação", "Suspense"], rating: 7.0, poster: "/sh7Rg8Er3tFcN9BpKIPOMvALgZd.jpg" },
+            { id: 4, title: "Godzilla e Kong: O Novo Império", genres: ["Ação", "Aventura", "Ficção Científica"], rating: 7.2, poster: "/tMefBSflR6PGQLvLuPE31vr35e8.jpg" },
+            { id: 5, title: "Todos Menos Você", genres: ["Romance", "Comédia"], rating: 6.9, poster: "/5qHoew0dtOaKcPUX0yE14sK20l.jpg" },
+            { id: 6, title: "Deadpool & Wolverine", genres: ["Ação", "Comédia", "Ficção Científica"], rating: 8.5, poster: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg" },
+            { id: 7, title: "Vidas Passadas", genres: ["Romance", "Drama"], rating: 8.0, poster: "/8ziQAHrN8A2EIn759U3i8iW0m2p.jpg" }
+        ];
+
+        // 2. Extrair lista única de gêneros dinamicamente
+        const allGenres = [...new Set(moviesData.flatMap(movie => movie.genres))].sort();
+
+        // Elementos da DOM
+        const filtersContainer = document.getElementById('genre-filters');
+        const moviesContainer = document.getElementById('movies-container');
+
+        // 3. Renderizar Checkboxes
+        function renderFilters() {
+            allGenres.forEach(genre => {
+                const label = document.createElement('label');
+                label.className = 'filter-label';
+                label.innerHTML = `
+                    <input type="checkbox" value="${genre}" class="genre-checkbox">
+                    ${genre}
+                `;
+                filtersContainer.appendChild(label);
+            });
+
+            // Adicionar evento de escuta para todos os checkboxes
+            document.querySelectorAll('.genre-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateMovies);
+            });
+        }
+
+        // 4. Lógica de Filtragem Inclusiva (O Segredo do "AND")
+        function updateMovies() {
+            // Pega os valores de todos os checkboxes que estão marcados
+            const checkedBoxes = Array.from(document.querySelectorAll('.genre-checkbox:checked'));
+            const selectedGenres = checkedBoxes.map(box => box.value);
+
+            // Filtrar a base de dados
+            const filteredMovies = moviesData.filter(movie => {
+                if (selectedGenres.length === 0) return true; // Mostra tudo se nada for selecionado
+                
+                // O método .every() garante que o filme só passe se tiver TODOS os gêneros selecionados
+                return selectedGenres.every(genre => movie.genres.includes(genre));
+            });
+
+            renderMovies(filteredMovies);
+        }
+
+        // 5. Renderizar os Filmes na Tela
+        function renderMovies(movies) {
+            moviesContainer.innerHTML = ''; // Limpa o grid
+
+            if (movies.length === 0) {
+                moviesContainer.innerHTML = `<div class="no-results">Nenhum filme encontrado com essa combinação de gêneros.</div>`;
+                return;
+            }
+
+            movies.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                
+                // Trata as imagens usando o path real do TMDB
+                const imageUrl = movie.poster ? `${tmdbBaseUrl}${movie.poster}` : 'https://placehold.co/500x750/334155/f8fafc?text=Sem+Capa';
+
+                card.innerHTML = `
+                    <img src="${imageUrl}" alt="${movie.title}" class="movie-poster" loading="lazy">
+                    <div class="movie-info">
+                        <h3 class="movie-title" title="${movie.title}">${movie.title}</h3>
+                        <p class="movie-genres">${movie.genres.join(', ')}</p>
+                        <span class="movie-rating">★ ${movie.rating.toFixed(1)}</span>
+                    </div>
+                `;
+                moviesContainer.appendChild(card);
+            });
+        }
+
+        // Inicializar a aplicação
+        renderFilters();
+        renderMovies(moviesData); // Renderiza todos inicialmente
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Filmes</title>
+    <style>
+        :root {
+            --bg-color: #0f1014;
+            --surface-color: #1a1c23;
+            --primary-color: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        h1 { text-align: center; margin-bottom: 2rem; }
+
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+
+        .filter-label {
+            background-color: var(--surface-color);
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-label:has(input:checked) {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: #60a5fa;
+            transform: scale(1.05);
+        }
+
+        .filter-label input { display: none; }
+
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .movie-card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .movie-card:hover { transform: translateY(-5px); }
+
+        .movie-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            background-color: #2d3748;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .movie-info {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .movie-title {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            line-height: 1.3;
+        }
+
+        .movie-genres {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+
+        .movie-rating {
+            font-weight: 600;
+            color: #fbbf24; /* Amarelo para avaliação */
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        #status-message { text-align: center; color: var(--text-muted); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+    <h1>Recomendações de Filmes</h1>
+    
+    <div id="status-message">Carregando base de dados...</div>
+    <div id="filters" class="filters-container"></div>
+    <div id="movies-grid" class="movies-grid"></div>
+
+    <script>
+        let moviesDatabase = [];
+        const filtersContainer = document.getElementById('filters');
+        const moviesGrid = document.getElementById('movies-grid');
+        const statusMessage = document.getElementById('status-message');
+
+        // Limite de renderização para manter o carregamento rápido no DOM
+        const RENDER_LIMIT = 100; 
+
+        async function init() {
+            try {
+                const response = await fetch('data/movies.json');
+                if (!response.ok) throw new Error('Erro na requisição');
+                
+                moviesDatabase = await response.json();
+                
+                statusMessage.style.display = 'none';
+                generateFilters();
+                renderMovies(moviesDatabase);
+            } catch (error) {
+                console.error(error);
+                statusMessage.textContent = "Erro ao carregar movies.json. Lembre-se de rodar este arquivo usando um servidor local (Live Server, http-server, etc) devido à política de CORS do navegador.";
+            }
+        }
+
+        function generateFilters() {
+            const uniqueGenres = new Set();
+            
+            moviesDatabase.forEach(movie => {
+                if (Array.isArray(movie.genres)) {
+                    movie.genres.forEach(genre => uniqueGenres.add(genre));
+                }
+            });
+
+            // Ordena alfabeticamente e cria os elementos HTML
+            Array.from(uniqueGenres).sort().forEach(genre => {
+                const label = document.createElement('label');
+                label.className = 'filter-label';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = genre;
+                checkbox.addEventListener('change', handleFilterChange);
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(genre));
+                filtersContainer.appendChild(label);
+            });
+        }
+
+        function handleFilterChange() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.filter-label input:checked'));
+            const selectedGenres = checkedBoxes.map(cb => cb.value);
+
+            // Se nada estiver selecionado, reseta a lista
+            if (selectedGenres.length === 0) {
+                renderMovies(moviesDatabase);
+                return;
+            }
+
+            // Filtro AND: O filme precisa ter TODOS os gêneros selecionados
+            const filteredMovies = moviesDatabase.filter(movie => {
+                if (!Array.isArray(movie.genres)) return false;
+                
+                return selectedGenres.every(selectedGenre => 
+                    movie.genres.includes(selectedGenre)
+                );
+            });
+
+            renderMovies(filteredMovies);
+        }
+
+        function renderMovies(movies) {
+            moviesGrid.innerHTML = '';
+
+            if (movies.length === 0) {
+                moviesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Nenhum filme encontrado com essa combinação exata de gêneros.</p>';
+                return;
+            }
+
+            // Aplica o limite para evitar travamento do navegador com datasets muito grandes
+            const moviesToRender = movies.slice(0, RENDER_LIMIT);
+
+            moviesToRender.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+
+                // Trata filmes que não possuem URL de imagem
+                const posterElement = movie.poster 
+                    ? `<img class="movie-poster" src="${movie.poster}" alt="Capa de ${movie.title}" loading="lazy">`
+                    : `<div class="movie-poster">Sem Imagem</div>`;
+
+                // Garante que gêneros ausentes não quebrem o split/join
+                const genresText = Array.isArray(movie.genres) ? movie.genres.join(', ') : 'Desconhecido';
+                
+                // Formata popularidade/avaliação, caindo para 0 caso não exista
+                const rating = movie.popularity ? movie.popularity.toFixed(1) : '0.0';
+
+                card.innerHTML = `
+                    ${posterElement}
+                    <div class="movie-info">
+                        <h3 class="movie-title">${movie.title}</h3>
+                        <div class="movie-genres">${genresText}</div>
+                        <div class="movie-rating">
+                            ★ ${rating}
+                        </div>
+                    </div>
+                `;
+                
+                moviesGrid.appendChild(card);
+            });
+        }
+
+        // Inicia a aplicação
+        init();
+    </script>
+</body>
+</html>
